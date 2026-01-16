@@ -1,4 +1,21 @@
-# 使用 Node.js 官方镜像
+# 构建阶段
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# 复制依赖文件
+COPY package*.json ./
+
+# 安装所有依赖（包括 devDependencies，用于构建）
+RUN npm ci
+
+# 复制源代码
+COPY . .
+
+# 构建前端
+RUN npm run build
+
+# 生产阶段
 FROM node:20-alpine
 
 WORKDIR /app
@@ -6,14 +23,15 @@ WORKDIR /app
 # 复制依赖文件
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 只安装生产依赖
+RUN npm ci --omit=dev
 
-# 复制源代码
-COPY . .
+# 从构建阶段复制构建产物
+COPY --from=builder /app/dist ./dist
 
-# 构建前端
-RUN npm run build
+# 复制服务器文件
+COPY server.js ./
+COPY api ./api
 
 # 暴露端口
 EXPOSE 3000
