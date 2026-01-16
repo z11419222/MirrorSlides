@@ -23,7 +23,8 @@ app.use('/api', geminiRouter);
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // SPA 路由回退（放在 API 路由之后）
-app.get('*', (req, res) => {
+// Express 5 使用新版 path-to-regexp，需要使用 {*path} 语法
+app.get('/{*path}', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
