@@ -7,7 +7,7 @@
     "dev": "vite",
     "server": "node server.js",
     "build": "vite build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "node server.js",
     "preview": "vite preview"
   },
   "dependencies": {

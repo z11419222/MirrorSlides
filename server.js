@@ -20,14 +20,12 @@ app.use(express.json());
 app.use('/api', geminiRouter);
 
 // 生产环境：静态文件服务
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'dist')));
 
-    // SPA 路由回退
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    });
-}
+// SPA 路由回退（放在 API 路由之后）
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 // 启动服务器
 app.listen(PORT, () => {
