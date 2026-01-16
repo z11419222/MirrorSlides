@@ -14,14 +14,14 @@ type GenerationStatus = 'idle' | 'planning' | 'generating' | 'complete';
 const App: React.FC = () => {
   // --- STATE MANAGEMENT ---
   const [projects, setProjects] = useState<Project[]>(() => {
-    // Load from local storage
-    const saved = localStorage.getItem('fs_projects');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return [];
+    try {
+      const saved = localStorage.getItem('fs_projects');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
       }
+    } catch (e) {
+      console.error("Failed to load projects from localStorage", e);
     }
     return [];
   });
@@ -55,6 +55,13 @@ const App: React.FC = () => {
         handleCreateProject();
     }
   }, [projects.length]);
+
+  // Ensure an active project is selected if possible
+  useEffect(() => {
+    if (projects.length > 0 && !activeProjectId) {
+      setActiveProjectId(projects[0].id);
+    }
+  }, [projects, activeProjectId]);
 
   // --- PROJECT ACTIONS ---
   const handleCreateProject = () => {
@@ -139,7 +146,7 @@ const App: React.FC = () => {
       setStatus('complete');
     } catch (error) {
       console.error("Failed to generate slides", error);
-      alert("生成幻灯片失败，请检查您的 API Key。");
+      alert("生成幻灯片失败，请检查您的 API Key 是否正确配置。");
       setStatus('idle');
     }
   }, [activeProjectId, currentProject]);
@@ -149,7 +156,7 @@ const App: React.FC = () => {
     
     updateCurrentProject(prev => {
         const slideIndex = prev.slides.findIndex(s => s.id === id);
-        if (slideIndex === -1) return {};
+        if (slideIndex === -1) return { slides: prev.slides };
 
         const original = prev.slides[slideIndex];
         const newSlide: Slide = {
@@ -161,8 +168,7 @@ const App: React.FC = () => {
         };
         
         const updatedSlides = [...prev.slides];
-        updatedSlides.splice(slideIndex, 0, newSlide); // Insert Remix after original (or replace? Original logic was prepend to history, let's replace for cleanliness in project view or add after)
-        // Let's stick to adding it right after the original so user can choose.
+        updatedSlides.splice(slideIndex + 1, 0, newSlide); 
         
         return { slides: updatedSlides };
     });
@@ -178,7 +184,7 @@ const App: React.FC = () => {
   const hasStarted = slides.length > 0;
 
   return (
-    <div className="relative min-h-screen text-white font-sans selection:bg-primary/30 flex">
+    <div className="relative min-h-screen text-white font-sans selection:bg-primary/30 flex w-full">
       <DottedGlowBackground />
       
       <ProjectSidebar 
@@ -190,13 +196,12 @@ const App: React.FC = () => {
         onImportProject={handleImportProject}
       />
 
-      {/* Main Content Wrapper - Changed from min-h-screen to h-screen overflow-y-auto for scrolling */}
+      {/* Main Content Wrapper */}
       <div className="flex-1 transition-all duration-300 md:ml-64 relative z-10 flex flex-col h-screen overflow-y-auto custom-scrollbar">
         {/* Header */}
         <header className="sticky top-0 z-40 p-6 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent backdrop-blur-sm pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
                 <div className="md:hidden w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                   {/* Mobile Menu Placeholder */}
                    <span className="font-bold">Fs</span>
                 </div>
                 <div className="hidden md:flex w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-lg items-center justify-center shadow-lg shadow-primary/20">

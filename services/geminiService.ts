@@ -1,9 +1,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const apiKey = process.env.API_KEY;
+/**
+ * 安全获取 API Key，防止在没有 process 对象的环境中崩溃
+ */
+const getSafeApiKey = (): string | undefined => {
+  try {
+    return process.env.API_KEY;
+  } catch (e) {
+    console.warn("Unable to access process.env.API_KEY");
+    return undefined;
+  }
+};
 
 // Helper to ensure we have a key
 const getAIClient = () => {
+  const apiKey = getSafeApiKey();
   if (!apiKey) {
     console.error("API_KEY is missing from environment variables.");
     throw new Error("API Key missing");
@@ -76,17 +87,12 @@ const injectSafetyStyles = (html: string): string => {
     </style>
   `;
 
-  // Script to allow the parent to restart animations
-  // We place this in the HEAD so it persists even if we reset document.body.innerHTML
   const controlScript = `
     <script>
       window.addEventListener('message', (e) => {
         if (e.data === 'play') {
-          // Force a Reflow/Repaint of the body to restart CSS animations from 0
-          // This is the cleanest way to restart animations without reloading the iframe
           const currentContent = document.body.innerHTML;
           document.body.innerHTML = ''; 
-          // Trigger reflow
           void document.body.offsetWidth;
           document.body.innerHTML = currentContent;
         }
@@ -94,7 +100,6 @@ const injectSafetyStyles = (html: string): string => {
     </script>
   `;
 
-  // Inject before head close
   if (html.includes('</head>')) {
     return html.replace('</head>', `${safetyCSS}${controlScript}</head>`);
   } else {
@@ -102,10 +107,6 @@ const injectSafetyStyles = (html: string): string => {
   }
 };
 
-/**
- * STEP 1: Plan the presentation structure based on the script.
- * The AI decides how many slides are needed.
- */
 export const planPresentation = async (script: string): Promise<SlidePlan[]> => {
   try {
     const ai = getAIClient();
@@ -153,7 +154,6 @@ export const planPresentation = async (script: string): Promise<SlidePlan[]> => 
 
   } catch (error) {
     console.error("Error planning presentation:", error);
-    // Fallback to 3 slides if planning fails
     return [
       { phase: "介绍", instruction: "Cover the beginning of the script." },
       { phase: "细节", instruction: "Cover the main details." },
@@ -162,9 +162,6 @@ export const planPresentation = async (script: string): Promise<SlidePlan[]> => 
   }
 };
 
-/**
- * STEP 2: Generate a single slide based on the plan.
- */
 export const generateSlide = async (fullScript: string, context: { phase: string, instruction: string }): Promise<string> => {
   try {
     const ai = getAIClient();
